@@ -1,0 +1,94 @@
+language: c++
+sudo: required
+dist: xenial
+
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+ 
+env: 
+  global:
+    - CTEST_OUTPUT_ON_FAILURE=True # Print output of failed unit test.
+
+  matrix:
+    - BUILD_TYPE=Debug
+    - BUILD_TYPE=Release
+
+matrix:
+  exclude:
+    - os: linux
+      compiler: clang
+    - os: osx
+      compiler: gcc
+
+cache:
+  directories:
+    - $HOME/downloads
+    - /usr/local/opt/qt
+    - /opt/qt512
+    - $HOME/Library/Caches/Homebrew
+
+addons:
+  homebrew:
+    packages:
+    - ruby
+    - ninja
+    update: true
+  apt:
+    sources:
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.3-xenial'
+    packages:
+    - ruby
+    - gcc-6 
+    - g++-6
+    - ninja-build
+    - qt512tools
+    - qt512websockets
+
+before_install:
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 90
+      sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
+      sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-6 90
+    fi
+
+install:
+  - mkdir -p $HOME/downloads  && cd $HOME/downloads
+  - test -f $HOME/downloads/cmake-3.12.4-Linux-x86_64.tar.gz || travis_retry wget --no-check-certificate --quiet ${BARCOHC_BIN}/qaweb-binaries/cmake/3.12.4/cmake-3.12.4-Linux-x86_64.tar.gz
+
+  # Install Qt5.12
+  - |
+    # Install Qt
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      source /opt/qt512/bin/qt512-env.sh
+    else
+      if [[ ! -f /usr/local/opt/qt/bin/qmake ]]; then
+      # install Qt 5.12.3 because 5.13 from Travis Mac image causes compile errors in Qt code
+      brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/65a45a9e/Formula/qt.rb
+      fi
+      export QTDIR="/usr/local/opt/qt"
+      export PATH="$QTDIR/bin:$PATH"
+    fi
+  
+  - |
+    # Install cmake
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      cd $HOME
+      mkdir cmake && tar -f $HOME/downloads/cmake-3.12.4-Linux-x86_64.tar.gz --strip-components=1 -xz -C cmake
+      export PATH=${HOME}/cmake/bin:${PATH}
+    fi
+
+before_script:
+  - cd /tmp
+  - mkdir build
+  - cd build
+  - qmake ${TRAVIS_BUILD_DIR}/futures.pro
+
+script:
+  - make

@@ -25,3 +25,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     myclass.h
+
+DISTFILES += \
+    .travis.yml
