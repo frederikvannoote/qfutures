@@ -19,5 +19,7 @@ int main(int argc, char *argv[])
     t.setInterval(100);
     t.start();
 
+    QTimer::singleShot(10000, &a, &QCoreApplication::quit);
+
     return a.exec();
 }
